@@ -37,24 +37,13 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   late final FirebaseMessaging _messaging;
-  late int _totalNotifications;
+  late int _totalNotifications = 0;
   PushNotification? _notificationInfo;
 
   @override
   void initState() {
-    _totalNotifications = 0;
-    FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
-      PushNotification notification = PushNotification(
-        title: message.notification?.title,
-        body: message.notification?.body,
-        dataTitle: message.data['title'],
-        dataBody: message.data['body'],
-      );
-      setState(() {
-        _notificationInfo = notification;
-        _totalNotifications++;
-      });
-    });
+    registerNotification();
+    checkForInitialMessage();
 
     super.initState();
   }
@@ -118,7 +107,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
     // 2. Instantiate Firebase Messaging
     _messaging = FirebaseMessaging.instance;
-
+    _messaging.getToken().then((value) => print("Token: " + value.toString()));
     // 3. On iOS, this helps to take the user permissions
     NotificationSettings settings = await _messaging.requestPermission(
       alert: true,
@@ -143,6 +132,24 @@ class _MyHomePageState extends State<MyHomePage> {
       }
     } else {
       print('User declined or has not accepted permission');
+    }
+  }
+
+  checkForInitialMessage() async {
+    await Firebase.initializeApp().then((value) => value.setAutomaticDataCollectionEnabled(true));
+    RemoteMessage? initialMessage =
+    await FirebaseMessaging.instance.getInitialMessage();
+
+
+    if (initialMessage != null) {
+      PushNotification notification = PushNotification(
+        title: initialMessage.notification?.title,
+        body: initialMessage.notification?.body,
+      );
+      setState(() {
+        _notificationInfo = notification;
+        _totalNotifications++;
+      });
     }
   }
 }
